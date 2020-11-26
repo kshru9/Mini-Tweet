@@ -3,54 +3,59 @@ import threading
 # from _thread import *
 import pickle
 from utils import *
+from database import *
 
-"""
-structure of database
-{
-	username: {
-		password: password,
-		is_logged: true,
-		tweets: list({
-				tweet: string,
-				date: date,
-				time: time,
-			}),
-		followers: list(),
-		following: list()
-	},
+def profile_page(client_conn, database, username):
+	while True:
+		details = db_get_user_details(database, username)
+		
+		followers = db_get_user_followers(database, username)
+		
+		profile_message = """Your Profile details"""
+		client_conn.send(
+			bytes(
+				"""Your Profile details:
+					Username: 
+				""" + username
+				"""Followers: """ + 
+				
+			, 'utf-8')
+		)
+		
+def user_feed_page(client_conn, database, username):
 
-	hashtag_category: {
-		user: list({
-			tweet: string,
-			date: date,
-			time: time
-		})
-	}
-}
-"""
+def user_followers_page(client_conn, database, username):
+	while True:
+		followers = db_get_user_followers(database, username)
 
-def db_addlogin(database, username, password):
-	database[username] = {
-		"password": password,
-		"is_logged": False,
-		"tweets": list(),
-		"followers": list(),
-		"following": list()
-	}
-	print('Added %s to database' %username)
+		client_conn.send(
+			bytes(
+				"""Your Followers are:
+				""" + followers
+			, 'utf-8')
+		)
 
-def db_load(dbfile):
-	File = open(dbfile, 'rb')
-	db = pickle.load(File)
-	File.close()
-	return db
+def user_followings_page(client_conn, database, username):
+	while True:
+		followers = db_get_user_following(database, username)
 
+		client_conn.send(
+			bytes(
+				"""People whom you follow are:
+				""" + followers
+			, 'utf-8')
+		)
 
-def db_save(database, filename):
-	dbfile = open(filename, 'ab')
-	pickle.dump(database, dbfile)
-	dbfile.close()
+def user_tweets_page(client_conn, database, username):
+	while True:
+		tweets = db_get_user_tweets(database, username)
 
+		client_conn.send(
+			bytes(
+				"""Your Tweets are:
+				""" + tweets
+			, 'utf-8')
+		)
 
 def login_page(client_conn, database):
 	"""A function to send login page to client"""
@@ -81,6 +86,21 @@ def login_page(client_conn, database):
 					"""
 				, 'utf-8')
 			)
+			
+			response = client_conn.recv(1024).decode()
+
+			if (response == "1"):
+				profile_page(client_conn, database)
+			elif (response == "2"):
+				user_feed_page(client_conn, database)
+			elif (response == "3"):
+				user_followers_page(client_conn, database)
+			elif (response == "4"):
+				user_followings_page(client_conn, database)
+			elif (response == "5"):
+				user_tweets_page(client_conn, database)
+			elif (response == "6"):
+				exit_page(client_conn)
 		elif (auth == 0):
 			client_conn.send(
 				bytes(
