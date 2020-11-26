@@ -21,7 +21,7 @@ from _thread import *
 
 def home_page(client_conn, username):
 
-	while True:
+	while True: 
 		client_conn.send(
 			bytes(
 				"""
