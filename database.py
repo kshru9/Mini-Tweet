@@ -13,12 +13,14 @@ structure of database
 		following: list()
 	},
 
-	hashtag_category: {
-		user: list({
-			tweet: string,
-			date: date,
-			time: time
-		})
+	hashtag_category:{ 
+		hashtag:{
+			list({ username:
+				tweet: string,
+				date: date,
+				time: time
+			})
+		}
 	}
 }
 """
@@ -45,13 +47,6 @@ def db_save(database, filename):
 	pickle.dump(database, dbfile)
 	dbfile.close()
 
-def db_get_user_details(database, username):
-	detials = dict()
-	detials["followers"] = database[username]["followers"]
-	detials["following"] = database[username]["following"]
-	detials["tweets"] = database[username]["tweets"]
-	return detials
-
 def db_get_user_followers(database, username):
 	followers = database[username]["followers"]
 	string = ""
@@ -75,3 +70,34 @@ def db_get_user_tweets(database, username):
 		string += x
 		string += "\n"
 	return string
+
+def db_get_user(database, username):
+	users = list(database.keys())
+	if (username in users):
+		return 1
+	return 0
+
+def setHash(database,hashtag,username,tweet,date,time):
+	if hashtag in database['hashtag_category'].keys() :
+		pass
+	else:
+		database['hashtag_category'][hashtag]=[]
+	details={
+		'username':username,
+		'tweet':tweet,
+		'date':date,
+		'time':time,
+	}
+	database['hashtag_category'][hashtag].append(details)
+
+def setTweet(database,username,tweet,date,time):
+	if 'tweets' in database[username].keys() :
+		pass
+	else:
+		database[username]['tweets']=[]
+	details={
+		'tweet' : tweet,
+		'date': date,
+		'time': time,
+	}
+	database[username]['tweets'].append(details)
