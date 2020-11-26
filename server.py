@@ -3,12 +3,9 @@ import threading
 # from _thread import *
 from collections import defaultdict
 
-database = defaultdict(list)
-
 def db_addlogin(database, username, password):
-	database[username].append({
-		"password": password
-	})
+	database[username].append(password)
+	print("added to db!")
 
 
 
@@ -46,21 +43,17 @@ def exit_page(client_conn):
 	while True:
 		client_conn.send(
 			bytes(
-				"""
-				Thanks for using Mini Tweet!
-				"""
+				"""Thanks for using Mini Tweet!"""
 			, 'utf-8')
 		)
+		return
+		
 
-		client_conn.close()
-
-def create_account_page(client_conn):
+def create_account_page(client_conn, database):
 	while True:
 		client_conn.send(
 			bytes(
-				"""
-				Enter your username and password:
-				"""
+				"""Enter your username and password:"""
 			, 'utf-8')
 		)
 
@@ -89,7 +82,7 @@ def create_account_page(client_conn):
 
 
 
-def home_page(client_conn):
+def home_page(client_conn , database):
 
 	while True: 
 		client_conn.send(
@@ -99,6 +92,7 @@ def home_page(client_conn):
 				1: for login
 				2: for creating account
 				3: your profile
+				4: exit
 				"""
 			, 'utf-8')
 		)
@@ -107,14 +101,22 @@ def home_page(client_conn):
 
 		if not response:
 			continue
+		
+		print(response)
 
 		if (response == "1"):
-			login_page()
-		el
+			create_account_page(client_conn, database)
+		elif(response == "2"):
+			create_account_page(client_conn, database)
+		elif (response == "4"):
+			exit_page(client_conn)
+			return
 
 # hostname and port number
 host = "localhost"
 port = 12345
+
+database = defaultdict(list)
 
 # count for number of threads
 thread_count = 0
@@ -126,12 +128,18 @@ s.bind((host, port))
 
 # listening for client
 s.listen(5)
+print('Server listening ... ')
 
 while True:
 	# got the connection from client
 	connection, addr = s.accept()
 
-	connection.settimeout(10)
+	# connection.settimeout(10)
+
+	home_page(connection, database)
+
+	connection.close()
+	print("connection closed", repr(addr))
 
 	# data = connection.recv(1024)
 

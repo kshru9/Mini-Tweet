@@ -15,15 +15,16 @@ while True:
 
     if (conn == "Thanks for using Mini Tweet!"):
         print(conn)
-        time.sleep(1)
         break
     elif(conn == "Enter your username and password:"):
-        print(conn)
+        print('asking password')
+        print("Please" + conn)
         username = bytes(str(input()), 'utf-8')
-        client_socket.send(username)
         password = bytes(str(input()), 'utf-8')
+        client_socket.send(username)
         client_socket.send(password)
     else:
+        print('else')
         print(conn)
 
         response = bytes(str(input()), 'utf-8')
@@ -31,5 +32,6 @@ while True:
         client_socket.send(response)
 
 client_socket.close()
+print('Connection closed!')
 
 # basic client
