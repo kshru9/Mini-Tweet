@@ -1,45 +1,103 @@
 import socket
 import threading
 # from _thread import *
-from collections import defaultdict
+import pickle
+from utils import *
+
+"""
+structure of database
+{
+	username: {
+		password: password,
+		is_logged: true,
+		tweets: list({
+				tweet: string,
+				date: date,
+				time: time,
+			}),
+		followers: list(),
+		following: list()
+	},
+
+	hashtag_category: {
+		user: list({
+			tweet: string,
+			date: date,
+			time: time
+		})
+	}
+}
+"""
 
 def db_addlogin(database, username, password):
-	database[username].append(password)
-	print("added to db!")
+	database[username] = {
+		"password": password,
+		"is_logged": False,
+		"tweets": list(),
+		"followers": list(),
+		"following": list()
+	}
+	print('Added %s to database' %username)
+
+def db_load(dbfile):
+	File = open(dbfile, 'rb')
+	db = pickle.load(File)
+	File.close()
+	return db
 
 
+def db_save(database, filename):
+	dbfile = open(filename, 'ab')
+	pickle.dump(database, dbfile)
+	dbfile.close()
 
-# # initialising lock
-# main_lock = threading.Lock()
 
-# def thread_func(connection, filename):
-# """Function which sends data to connected client"""
+def login_page(client_conn, database):
+	"""A function to send login page to client"""
 
-# 	fd = open(filename, "rb")
+	while True:
+		client_conn.send(
+			bytes(
+				"""Enter your username and password:"""
+			, 'utf-8')
+		)
 
-# 	l = fd.read(64*1024)
-# 	while(l):
-# 		connection.send(l)
-# 		l = fd.read(64*1024)
-	
-# 	connection.send(bytes("EOF", 'utf-8'))
-# 	print('Done sending')
-# 	main_lock.release()
+		username = client_conn.recv(1024).decode()
+		password = client_conn.recv(1024).decode()
 
-# def create_account_html():
-# 	return (
-# 		"""
-# 		<html>
-# 			<head> <title> Mini Tweet | Create Account <\title> <\head>
-# 			<body> 
-# 				<h1> Create Account<\h1> 
-				
-# 			<\body>
-# 		<\html>
-# 		"""
-# 	)
+		auth = login_auth(database, username, password)
+		if (auth):
+			client_conn.send(
+				bytes(
+					"""Login Successful!
+						Where you want to see next?
+						Reply with:
+						1: Profile page
+						2: Your feed
+						3: Your followers
+						4: Your followings
+						5: Your tweets
+						6: Exit
+					"""
+				, 'utf-8')
+			)
+		elif (auth == 0):
+			client_conn.send(
+				bytes(
+					"""Login Unsuccessful! Please check your username"""
+				, 'utf-8')
+			)
+		else:
+			client_conn.send(
+				bytes(
+					"""Login Unsuccessful! Please check your password"""
+				, 'utf-8')
+			)
+
 
 def exit_page(client_conn):
+	""" A function to send exit page to client"""
+
 	while True:
 		client_conn.send(
 			bytes(
@@ -50,6 +108,8 @@ def exit_page(client_conn):
 		
 
 def create_account_page(client_conn, database):
+	"""A function to handle create account messaging with client"""
+
 	while True:
 		client_conn.send(
 			bytes(
@@ -76,13 +136,14 @@ def create_account_page(client_conn, database):
 		response = client_conn.recv(1024).decode()
 
 		if (response == "1"):
-			login_page()
+			login_page(client_conn, database)
 		else:
-			exit_page()
+			exit_page(client_conn)
 
 
 
 def home_page(client_conn , database):
+	"""A function to send home page to client"""
 
 	while True: 
 		client_conn.send(
@@ -105,7 +166,7 @@ def home_page(client_conn , database):
 		print(response)
 
 		if (response == "1"):
-			create_account_page(client_conn, database)
+			login_page(client_conn, database)
 		elif(response == "2"):
 			create_account_page(client_conn, database)
 		elif (response == "4"):
@@ -115,8 +176,6 @@ def home_page(client_conn , database):
 # hostname and port number
 host = "localhost"
 port = 12345
-
-database = defaultdict(list)
 
 # count for number of threads
 thread_count = 0
@@ -136,30 +195,14 @@ while True:
 
 	# connection.settimeout(10)
 
+	database = db_load("user")
+
 	home_page(connection, database)
+
+	db_save(database, "user")
 
 	connection.close()
 	print("connection closed", repr(addr))
-
-	# data = connection.recv(1024)
-
-	# # if client do not send any data, close the connection and exit
-	# if not data:
-	# 	print("Bye")
-	# 	connection.close()
-	# 	break
-
-	# filename = data.decode() + ".txt"
-	
-	# # for a single file requested, acquire the lock and create a new thread to send the file
-	# main_lock.acquire()
-	# print('connection from:', repr(addr))
-
-	# thread_count+=1
-	# print(thread_count)
-
-	# # start new thread
-	# start_new_thread(thread_func, (connection, filename, ))
 
 # close the socket object
 s.close()

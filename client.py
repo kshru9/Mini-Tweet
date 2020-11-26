@@ -17,8 +17,7 @@ while True:
         print(conn)
         break
     elif(conn == "Enter your username and password:"):
-        print('asking password')
-        print("Please" + conn)
+        print(conn)
         username = bytes(str(input()), 'utf-8')
         password = bytes(str(input()), 'utf-8')
         client_socket.send(username)
