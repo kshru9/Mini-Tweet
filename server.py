@@ -19,7 +19,7 @@ def post_receive(client_conn,database,username):
 	date=dt_object.date
 	time=dt_object.time
 
-	hashtags=re.findall(r'#\w+') #creates a list of hashtags in the tweet
+	hashtags=re.findall(r'#\w+') # creates a list of hashtags in the tweet
 	for hash in hashtags:
 		setHash(database,hash,username,tweet,date,time)
 	followers = db_get_user_following(database, username)

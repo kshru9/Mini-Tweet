@@ -1,10 +1,6 @@
 import time
 import socket
 
-def post_tweet(client_socket) :
-    post_string=bytes(str(input()), 'utf-8')
-    client_socket.send(post_string)
-
 HOST = "localhost"
 PORT = 12345
 
