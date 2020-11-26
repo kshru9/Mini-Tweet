@@ -91,7 +91,7 @@ def create_account_page(client_conn):
 
 def home_page(client_conn):
 
-	while True:
+	while True: 
 		client_conn.send(
 			bytes(
 				"""
