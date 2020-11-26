@@ -1,6 +1,16 @@
 import socket
 import threading
-from _thread import *
+# from _thread import *
+from collections import defaultdict
+
+database = defaultdict(list)
+
+def db_addlogin(database, username, password):
+	database[username].append({
+		"password": password
+	})
+
+
 
 # # initialising lock
 # main_lock = threading.Lock()
@@ -19,7 +29,67 @@ from _thread import *
 # 	print('Done sending')
 # 	main_lock.release()
 
-def home_page(client_conn, username):
+# def create_account_html():
+# 	return (
+# 		"""
+# 		<html>
+# 			<head> <title> Mini Tweet | Create Account <\title> <\head>
+# 			<body> 
+# 				<h1> Create Account<\h1> 
+				
+# 			<\body>
+# 		<\html>
+# 		"""
+# 	)
+
+def exit_page(client_conn):
+	while True:
+		client_conn.send(
+			bytes(
+				"""
+				Thanks for using Mini Tweet!
+				"""
+			, 'utf-8')
+		)
+
+		client_conn.close()
+
+def create_account_page(client_conn):
+	while True:
+		client_conn.send(
+			bytes(
+				"""
+				Enter your username and password:
+				"""
+			, 'utf-8')
+		)
+
+		username = client_conn.recv(1024).decode()
+		password = client_conn.recv(1024).decode()
+
+		db_addlogin(database, username, password)
+
+		client_conn.send(
+			bytes(
+				"""
+				Your account was made successfully!
+				Reply with:
+				1: to login
+				2: to exit
+				"""
+			, 'utf-8')
+		)
+
+		response = client_conn.recv(1024).decode()
+
+		if (response == "1"):
+			login_page()
+		else:
+			exit_page()
+
+
+
+def home_page(client_conn):
 
 	while True:
 		client_conn.send(
@@ -61,7 +131,7 @@ while True:
 	# got the connection from client
 	connection, addr = s.accept()
 
-	connection.settimeout(100)
+	connection.settimeout(10)
 
 	# data = connection.recv(1024)
 
