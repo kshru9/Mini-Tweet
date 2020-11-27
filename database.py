@@ -1,3 +1,4 @@
+import pickle
 """
 structure of database
 {
@@ -34,6 +35,7 @@ def db_addlogin(database, username, password):
 		"following": list()
 	}
 	print('Added %s to database' %username)
+	db_save(database, "user")
 
 def db_load(dbfile):
 	File = open(dbfile, 'rb')
@@ -53,6 +55,7 @@ def db_get_user_followers(database, username):
 	for x in followers:
 		string += x
 		string += "\n"
+	db_save(database, "user")
 	return string
 
 def db_get_user_following(database, username):
@@ -61,6 +64,7 @@ def db_get_user_following(database, username):
 	for x in followings:
 		string += x
 		string += "\n"
+	db_save(database, "user")
 	return string
 
 def db_get_user_tweets(database, username):
@@ -69,12 +73,15 @@ def db_get_user_tweets(database, username):
 	for x in tweets:
 		string += x
 		string += "\n"
+	db_save(database, "user")
 	return string
 
 def db_get_user(database, username):
 	users = list(database.keys())
 	if (username in users):
+		db_save(database, "user")
 		return 1
+	db_save(database, "user")
 	return 0
 
 def setHash(database,hashtag,username,tweet,date,time):
@@ -89,6 +96,7 @@ def setHash(database,hashtag,username,tweet,date,time):
 		'time':time,
 	}
 	database['hashtag_category'][hashtag].append(details)
+	db_save(database, "user")
 
 def setTweet(database,username,tweet,date,time):
 	if 'tweets' in database[username].keys() :
@@ -101,3 +109,4 @@ def setTweet(database,username,tweet,date,time):
 		'time': time,
 	}
 	database[username]['tweets'].append(details)
+	db_save(database, "user")

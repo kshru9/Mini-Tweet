@@ -92,7 +92,7 @@ def search_user_page(client_conn , database, username):
 			elif (response == "4"):
 				user_tweets_page(client_conn, database, username)
 			elif (response == "5"):
-				user_post_tweet(client_conn, database, username)
+				post_receive(client_conn, database, username)
 			elif (response == "6"):
 				search_user_page(client_conn, database, username)
 			elif (response == "7"):
@@ -113,14 +113,14 @@ def user_profile_page(client_conn, database, username):
 			bytes(
 				"""Your Profile details:
 					Username: 
-				""" + username
+				""" + username +
 				"""Followers: """ + followers +
-				"""Followings:""" + followings +
-				
+				"""Followings:""" + followings
 			, 'utf-8')
 		)
 		
 def user_feed_page(client_conn, database, username):
+	pass
 
 def user_follower_detail(client_conn, database, username, parent_user):
 	"""A function to send details of requested follower of client to client"""
@@ -217,9 +217,9 @@ def user_followers_page(client_conn, database, username):
 		elif (response == "4"):
 			user_tweets_page(client_conn, database, username)
 		elif (response == "5"):
-			user_post_tweet(client_conn, database, username)
+			post_receive(client_conn, database, username)
 		elif (response == "6"):
-			search_user(client_conn, database, username)
+			search_user_page(client_conn, database, username)
 		elif (response == "7"):
 			logout_page(client_conn, database, username)
 		else:
@@ -281,7 +281,7 @@ def user_tweets_page(client_conn, database, username):
 		elif (response == "4"):
 			user_delete_tweets(client_conn, database, username)
 		elif (response == "5"):
-			user_post_tweet(client_conn, database, username)
+			post_receive(client_conn, database, username)
 		elif (response == "6"):
 			search_user_page(client_conn, database, username)
 		elif (response == "7"):
@@ -343,7 +343,7 @@ def login_page(client_conn, database):
 						5: Your tweets
 						6: Post Tweet
 						7: Search User
-						6: Log out (Please do not click this!)
+						8: Log out (Please do not click this!)
 					"""
 				, 'utf-8')
 			)
@@ -361,7 +361,7 @@ def login_page(client_conn, database):
 			elif (response == "5"):
 				user_tweets_page(client_conn, database, username)
 			elif (response == "6"):
-				user_post_tweet(client_conn, database, username)
+				post_receive(client_conn, database, username)
 			elif (response == "7"):
 				search_user_page(client_conn, database, username)
 			elif (response == "8"):
