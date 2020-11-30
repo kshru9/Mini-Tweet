@@ -119,7 +119,6 @@ def user_feed_page(client_conn, database, username):
 		if (response=="1"):
 			user_profile_page(client_conn, database, username)
 	
-
 def post_receive(client_conn,database,username):
 	"""A function to send post tweet page to client"""
 	while True:
@@ -143,9 +142,9 @@ def post_receive(client_conn,database,username):
 
 		hashtags=re.findall(r'#\w+', response) # creates a list of hashtags in the tweet
 		for hash in hashtags:
-			database = setHash(database,hash,username,response,date,time)
+			database = setHash(database,hash,username,response,date,time, "NA")
 		
-		database = setTweet(database,username,response,date,time)
+		database = setTweet(database,username,response,date,time, "NA")
 		client_conn.send(
 			bytes(
 				"""Tweet posted!
@@ -163,6 +162,57 @@ def post_receive(client_conn,database,username):
 		elif (response=="2"):
 			user_profile_page(client_conn, database, username)
 
+def chat_with_user(client_conn, database, username, parent_user):
+	while True:
+		if (database[username]["is_logged"] == False):
+			client_conn.send(
+				bytes(
+					"""The user you are trying to chat is offline. Try again later""" + 
+					"""Reply with:
+					1: Your profile page
+					2: Chat with another person
+					"""
+				, 'utf-8')
+			)
+
+			response = client_conn.recv(1024).decode()
+
+			if (response=="1"):
+				user_profile_page(client_conn, database, username)
+			elif (response=="2"):
+				online_users(client_conn, database, username)
+		else:
+			client_conn.send(
+				bytes(
+					"""You can start chatting"""
+				, 'utf-8')
+			)
+
+			response = client_conn.recv(1024).decode()
+
+
+def online_users(client_conn, database, username):
+	"""A function to send list of all online users to client"""
+	while True:
+		
+		all_online = db_get_online_users(database)
+
+		client_conn.send(
+			bytes(
+				"""All the online users currently are: """ + all_online +
+				"""Reply with:
+				1: Your profile page
+				or Enter name of user to chat with
+				"""
+				,'utf-8')
+		)
+
+		response = client_conn.recv(1024).decode()
+
+		if (response=="1"):
+			user_profile_page(client_conn, database, username)
+		else:
+			chat_with_user(client_conn, database, response, username)
 
 def search_user_profile(client_conn, database, username, parent_user):
 	"""A Function to send search user profile page to client"""
@@ -223,6 +273,57 @@ def search_user_profile(client_conn, database, username, parent_user):
 		elif (response == "5"):
 			user_profile_page(client_conn, database, parent_user)
 
+def retweet(client_conn, database, username, parent_user, tweet):
+	"""A function to send retweet page to client"""
+	while True:
+
+		dt_object=datetime.now()
+		date=dt_object.strftime("%d/%m/%Y")
+		time=dt_object.strftime("%H:%M:%S")
+
+		hashtags=re.findall(r'#\w+', response) # creates a list of hashtags in the tweet
+		for hash in hashtags:
+			database = setHash(database,hash,username,response,date,time, parent_user)
+
+		database = setTweet(database,username,response,date,time, parent_user)
+
+		client_conn.send(
+			bytes(
+				"""Tweet posted!
+				Reply with:
+				1: Your profile page
+				"""
+			, 'utf-8')
+		)
+
+		response = client_conn.recv(1024).decode()
+
+		if (response=="1"):
+			user_profile_page(client_conn, database, parent_user)
+
+def search_user_tweets(client_conn, database, username, parent_user):
+	"""A function to send all tweets of searched user to client"""
+	while True:
+		allTweets = db_get_user_tweets(database, username)
+		
+		client_conn.send(
+			bytes(
+				allTweets +
+				"""Reply with:
+				Enter any of above tweet to retweet
+				or Reply with:
+				1: Your profile page
+				"""
+			, 'utf-8')
+		)
+
+		retweet = client_conn.recv(1024).decode()
+
+		if (retweet=="1"):
+			user_profile_page(client_conn, database, parent_user)
+		else:
+			retweet(client_conn, database, username, parent_user, retweet)
+
 def search_user_page(client_conn , database, username):
 	"""A Function to send search user page to client"""
 
@@ -257,7 +358,7 @@ def search_user_page(client_conn , database, username):
 			if (response == "1"):
 				search_user_profile(client_conn, database, search_user, username)
 			elif (response == "2"):
-				user_tweets_page(client_conn, database, search_user)
+				search_user_tweets(client_conn, database, search_user)
 			elif (response == "3"):
 				user_followers_page(client_conn, database, search_user)
 			elif (response == "4"):

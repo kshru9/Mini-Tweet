@@ -9,6 +9,7 @@ structure of database
 				tweet: string,
 				date: date,
 				time: time,
+				retweet: NA / from username
 			}),
 		followers: list(),
 		following: list()
@@ -19,7 +20,8 @@ structure of database
 			list({ username:
 				tweet: string,
 				date: date,
-				time: time
+				time: time,
+				retweet: NA / from username
 			})
 		}
 	}
@@ -127,7 +129,16 @@ def db_delete_tweet(database, username, tweet):
 		count+=1
 	return 0
 
-def setHash(database,hashtag,username,tweet,date,time):
+def db_get_online_users(database):
+	allusers = database.keys()
+	string = ""
+	for x in allusers:
+		if (database[x]["is_logged"] == True):
+			string += x
+			string += "\n"
+	return string
+
+def setHash(database,hashtag,username,tweet,date,time, retweet):
 	try:
 		if hashtag in database['hashtag_category'].keys():
 			pass
@@ -141,6 +152,7 @@ def setHash(database,hashtag,username,tweet,date,time):
 		'tweet':tweet,
 		'date':date,
 		'time':time,
+		'retweet': retweet
 	}
 	try:
 		database['hashtag_category'][hashtag].append(details)
@@ -151,12 +163,15 @@ def setHash(database,hashtag,username,tweet,date,time):
 	db_save(database, "user")
 	return database
 
-def setTweet(database,username,tweet,date,time):
+def setTweet(database,username,tweet,date,time, retweet):
 	details={
 		'tweet' : tweet,
 		'date': date,
 		'time': time,
+		'retweet': retweet
 	}
 	database[username]['tweets'].append(details)
 	db_save(database, "user")
 	return database
+
+def db_addRetweet(database, username, parent_user, tweet, date, time):
