@@ -4,27 +4,111 @@ import threading
 import pickle
 from utils import *
 from database import *
-import datetime
+from datetime import datetime
 import re
 
 def post_receive(client_conn,database,username):
+	"""A function to send post tweet page to client"""
+	while True:
+		client_conn.send(
+			bytes(
+				"""Enter tweet to post"""
+			, 'utf-8')
+		)
 
-	tweet=''
-	tweet_part=str((client_conn.recv(1024)).decode('utf-8'))
-	while tweet_part :
-		tweet+=tweet_part
-		tweet_part=str((client_conn.recv(1024)).decode('utf-8'))
+		response = client_conn.recv(1024).decode()
 
-	dt_object=datetime.now()
-	date=dt_object.date
-	time=dt_object.time
+	# tweet=''
+	# tweet_part=str((client_conn.recv(1024)).decode('utf-8'))
+	# while tweet_part :
+	# 	tweet+=tweet_part
+	# 	tweet_part=str((client_conn.recv(1024)).decode('utf-8'))
 
-	hashtags=re.findall(r'#\w+') # creates a list of hashtags in the tweet
-	for hash in hashtags:
-		setHash(database,hash,username,tweet,date,time)
-	followers = db_get_user_following(database, username)
-	
-	setTweet(database,username,tweet,date,time)
+		dt_object=datetime.now()
+		date=dt_object.date
+		time=dt_object.time
+
+		hashtags=re.findall(r'#\w+', response) # creates a list of hashtags in the tweet
+		for hash in hashtags:
+			setHash(database,hash,username,response,date,time)
+		
+		database = setTweet(database,username,response,date,time)
+		client_conn.send(
+			bytes(
+				"""Tweet posted!
+				Reply with:
+				1: post another tweet
+				2: Your profile page
+				"""
+			, 'utf-8')
+		)
+
+		response = client_conn.recv(1024).decode()
+
+		if (response=="1"):
+			post_receive(client_conn, database, username)
+		elif (response=="2"):
+			user_profile_page(client_conn, database, username)
+
+
+def search_user_profile(client_conn, database, username, parent_user):
+	"""A Function to send search user profile page to client"""
+
+	while True:
+		followers = db_get_user_followers(database, username)
+		followings = db_get_user_following(database, username)
+		
+		client_conn.send(
+			bytes(
+				"""Profile details:
+					Username: 
+				""" + username +
+				"""Followers: """ + followers +
+				"""Followings:""" + followings +
+				"""Reply with:
+				1: Search User
+				2: Follow this user
+				3: Unfollow this user
+				4: chat with the user
+				5: Your profile page
+				"""
+			, 'utf-8')
+		)
+
+		response = client_conn.recv(1024).decode()
+
+		if (response == "1"):
+			search_user_page(client_conn, database, parent_user)
+		elif (response == "2"):
+			temp = db_follow_user(database, username, parent_user)
+			if (temp == 0):
+				client_conn.send(bytes("You already follow this user Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn, database, parent_user)
+			else:
+				database = temp
+				client_conn.send(bytes("User followed! Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn, database, parent_user)
+		elif (response == "3"):
+			temp = db_unfollow_user(database, username, parent_user)
+			if (temp == 0):
+				client_conn.send(bytes("You do not follow this user. Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn, database, parent_user)
+			else:
+				database = temp
+				client_conn.send(bytes("User unfollowed! Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn, database, parent_user)
+		elif (response == "4"):
+			user_tweets_page(client_conn, database, username)
+		elif (response == "5"):
+			user_profile_page(client_conn, database, parent_user)
 
 def search_user_page(client_conn , database, username):
 	"""A Function to send search user page to client"""
@@ -36,9 +120,9 @@ def search_user_page(client_conn , database, username):
 			, 'utf-8')
 		)
 
-		response = client_conn.recv(1024).decode()
+		search_user = client_conn.recv(1024).decode()
 
-		if (db_get_user(database, response)):
+		if (db_get_user(database, search_user)):
 			client_conn.send(
 				bytes(
 					"""User Found !
@@ -47,7 +131,7 @@ def search_user_page(client_conn , database, username):
 						2: To get all tweets of searched user
 						3: To get all followers of searched user
 						4: To get all followings of searched user
-						5: Your feed
+						5: Your profile page
 					"""
 				, 'utf-8')
 			)
@@ -55,28 +139,21 @@ def search_user_page(client_conn , database, username):
 			response = client_conn.recv(1024).decode()
 
 			if (response == "1"):
-				user_profile_page(client_conn, database, response)
+				search_user_profile(client_conn, database, search_user, username)
 			elif (response == "2"):
-				user_tweets_page(client_conn, database, response)
+				user_tweets_page(client_conn, database, search_user)
 			elif (response == "3"):
-				user_followers_page(client_conn, database, response)
+				user_followers_page(client_conn, database, search_user)
 			elif (response == "4"):
-				user_followings_page(client_conn, database, response)
+				user_followings_page(client_conn, database, search_user)
 			elif (response == "5"):
-				user_feed_page(client_conn, database, username)
+				user_profile_page(client_conn, database, username)
 		else:
 			client_conn.send(
 				bytes(
 					"""User Not Found !
 						Reply with:
 						1: Your Profile page
-						2: Your feed
-						3: Your followings
-						4: Your tweets
-						5: Post Tweet
-						6: Search User Again
-						7: Your Followers
-						8: Log out (Please do not click this!)
 					"""
 				, 'utf-8')
 			)
@@ -84,40 +161,7 @@ def search_user_page(client_conn , database, username):
 			response = client_conn.recv(1024).decode()
 
 			if (response == "1"):
-				user_profile_page(client_conn, database, response)
-			elif (response == "2"):
-				user_feed_page(client_conn, database, response)
-			elif (response == "3"):
-				user_followings_page(client_conn, database, response)
-			elif (response == "4"):
-				user_tweets_page(client_conn, database, username)
-			elif (response == "5"):
-				post_receive(client_conn, database, username)
-			elif (response == "6"):
-				search_user_page(client_conn, database, username)
-			elif (response == "7"):
-				user_followers_page(client_conn, database, response)
-			elif (response == "8"):
-				logout_page(client_conn, database, username)
-
-def user_profile_page(client_conn, database, username):
-	"""A function to send profile page to the client"""
-
-	while True:
-		details = db_get_user_details(database, username)
-		
-		followers = db_get_user_followers(database, username)
-		
-		profile_message = """Your Profile details"""
-		client_conn.send(
-			bytes(
-				"""Your Profile details:
-					Username: 
-				""" + username +
-				"""Followers: """ + followers +
-				"""Followings:""" + followings
-			, 'utf-8')
-		)
+				user_profile_page(client_conn, database, username)
 		
 def user_feed_page(client_conn, database, username):
 	pass
@@ -137,8 +181,7 @@ def user_follower_detail(client_conn, database, username, parent_user):
 				"""Tweets:""" + tweets + 
 				"""Reply with:
 				1: Follow
-				2: Your Feed
-				3: Your profile page
+				2: Your profile page
 				"""
 			, 'utf-8')
 		)
@@ -146,11 +189,19 @@ def user_follower_detail(client_conn, database, username, parent_user):
 		response = client_conn.recv(1024).decode()
 
 		if (response == "1"):
-			database[username]["followers"].append(parent_user)
-			database[parent_user]["followings"].append(username)
+			temp = db_follow_user(database, username, parent_user)
+			if (temp==0):
+				client_conn.send(bytes("You already follow this user. Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn,database,parent_user)
+			else:
+				database = temp
+				client_conn.send(bytes("User Followed. Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn,database,parent_user)
 		elif (response == "2"):
-			user_feed_page(client_conn, database, parent_user)
-		elif (response == "3"):
 			user_profile_page(client_conn, database, parent_user)
 
 def user_following_detail(client_conn, database, username, parent_user):
@@ -168,8 +219,7 @@ def user_following_detail(client_conn, database, username, parent_user):
 				"""Tweets:""" + tweets + 
 				"""Reply with:
 				1: Unfollow
-				2: Your Feed
-				3: Your profile page
+				2: Your profile page
 				"""
 			, 'utf-8')
 		)
@@ -177,11 +227,19 @@ def user_following_detail(client_conn, database, username, parent_user):
 		response = client_conn.recv(1024).decode()
 
 		if (response == "1"):
-			database[parent_user]["followings"].remove(username)
-			database[username]["followers"].remove(parent_user)
+			temp = db_unfollow_user(database, username, parent_user)
+			if (temp == 0):
+				client_conn.send(bytes("You do not follow this user. Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn,database,parent_user)
+			else:
+				database = temp
+				client_conn.send(bytes("Unfollowed user. Reply with: 1: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response=="1"):
+					user_profile_page(client_conn,database,parent_user)
 		elif (response == "2"):
-			user_feed_page(client_conn, database, parent_user)
-		elif (response == "3"):
 			user_profile_page(client_conn, database, parent_user)
 
 def user_followers_page(client_conn, database, username):
@@ -193,37 +251,13 @@ def user_followers_page(client_conn, database, username):
 			bytes(
 				"""Your Followers are:
 				""" + followers +
-				"""Reply with:
-					1: Profile page
-					2: Your feed
-					3: Your followings
-					4: Your tweets
-					5: Post Tweet
-					6: Search User
-					7: Log out (Please do not click this!) 
-				""" +
-				""" or Enter name of follower to get details"""
+				""" Enter name of follower to get details"""
 			, 'utf-8')
 		)
 
 		response = client_conn.recv(1024).decode()
 
-		if (response == "1"):
-			user_profile_page(client_conn, database, username)
-		elif (response == "2"):
-			user_feed_page(client_conn, database, username)
-		elif (response == "3"):
-			user_followings_page(client_conn, database, username)
-		elif (response == "4"):
-			user_tweets_page(client_conn, database, username)
-		elif (response == "5"):
-			post_receive(client_conn, database, username)
-		elif (response == "6"):
-			search_user_page(client_conn, database, username)
-		elif (response == "7"):
-			logout_page(client_conn, database, username)
-		else:
-			user_follower_detail(client_conn, database, response, username)
+		user_follower_detail(client_conn, database, response, username)
 
 def user_followings_page(client_conn, database, username):
 	"""A function to send page containing all people it is following to client"""
@@ -234,18 +268,13 @@ def user_followings_page(client_conn, database, username):
 			bytes(
 				"""People whom you follow are:
 				""" + followers +
-				"""Reply with:
-					1: Profile page
-					2: Your feed
-					3: Your followings
-					4: Your tweets
-					5: Post Tweet
-					6: Search User
-					7: Log out (Please do not click this!) 
-				""" +
-				""" or Enter username of followings to get details"""
+				"""Enter username of any of your followings to get details"""
 			, 'utf-8')
 		)
+
+		response = client_conn.recv(1024).decode()
+
+		user_following_detail(client_conn, database, response, username)
 
 def user_tweets_page(client_conn, database, username):
 	"""A function to send page containing all its tweets to client"""
@@ -258,14 +287,76 @@ def user_tweets_page(client_conn, database, username):
 			bytes(
 				"""Your Tweets are:
 				""" + tweets +
-				""" Reply with:
-					1: Profile page
-					2: Your feed
-					3: Your followings
-					4: Delete tweets
-					5: Post Tweet
-					6: Search User
-					7: Log out (Please do not click this!)
+				""" Enter tweet to delete it
+				"""
+			, 'utf-8')
+		)
+
+		response = client_conn.recv(1024).decode()
+
+		temp = db_delete_tweet(database, username, response)
+		if (temp == 0):
+			client_conn.send(bytes("The tweet you entered do not exist. Reply with: 1: try again 2: Your profile page", 'utf-8'))
+			response = client_conn.recv(1024).decode()
+			if (response == "1"):
+				continue
+			else:
+				user_profile_page(client_conn, database, username)
+		else:
+			database = temp
+			client_conn.send(bytes("Tweet Deleted. Reply with: 1: Delete another 2: Your profile page", 'utf-8'))
+			response = client_conn.recv(1024).decode()
+			if (response == "1"):
+				continue
+			else:
+				user_profile_page(client_conn, database, username)
+
+def logout_page(client_conn, database, username):
+	"""A function to logout client"""
+	
+	# while True:
+	database[username]["is_logged"] = False
+
+	client_conn.send(
+		bytes(
+			"""You have been successfully logged out!
+				See you soon!
+			"""
+		, 'utf-8')
+	)
+	return
+
+def exit_page(client_conn):
+	""" A function to send exit page to client"""
+	client_conn.send(
+		bytes(
+			"""Thanks for using Mini Tweet!"""
+		, 'utf-8')
+	)
+	return
+
+
+def user_profile_page(client_conn, database, username):
+	"""A function to send profile page to the client"""
+
+	while True:
+		followers = db_get_user_followers(database, username)
+		followings = db_get_user_following(database, username)
+		
+		profile_message = """Your Profile details"""
+		client_conn.send(
+			bytes(
+				"""Your Profile details:
+					Username: 
+				""" + username +
+				"""Followers: """ + followers +
+				"""Followings:""" + followings +
+				"""Reply with:
+				1: Search User
+				2: Your feed
+				3: Your tweets
+				4: Post Tweet
+				5: Log out (We will miss you!)
 				"""
 			, 'utf-8')
 		)
@@ -273,111 +364,85 @@ def user_tweets_page(client_conn, database, username):
 		response = client_conn.recv(1024).decode()
 
 		if (response == "1"):
-			user_profile_page(database, username, tweet)
+			search_user_page(client_conn, database, username)
 		elif (response == "2"):
 			user_feed_page(client_conn, database, username)
 		elif (response == "3"):
-			user_followings_page(client_conn, database, username)
+			user_tweets_page(client_conn, database, username)
 		elif (response == "4"):
-			user_delete_tweets(client_conn, database, username)
-		elif (response == "5"):
 			post_receive(client_conn, database, username)
-		elif (response == "6"):
-			search_user_page(client_conn, database, username)
-		elif (response == "7"):
+		elif (response == "5"):
 			logout_page(client_conn, database, username)
-
-def logout_page(client_conn, database, username):
-	"""A function to logout client"""
-	
-	while True:
-		database[username]["is_logged"] = False
-
-		client_conn.send(
-			bytes(
-				"""You have been successfully logged out!
-					See you soon!
-				"""
-			, 'utf-8')
-		)
-		return
-
-def exit_page(client_conn):
-	""" A function to send exit page to client"""
-
-	while True:
-		client_conn.send(
-			bytes(
-				"""Thanks for using Mini Tweet!"""
-			, 'utf-8')
-		)
-		return
+			return
 
 def login_page(client_conn, database):
 	"""A function to send login page to client"""
 
-	while True:
+	# while True:
+	client_conn.send(
+		bytes(
+			"""Enter your username and password:"""
+		, 'utf-8')
+	)
+
+	username = client_conn.recv(1024).decode()
+	password = client_conn.recv(1024).decode()
+
+	auth = login_auth(database, username, password)
+	if (auth):
+			
+		database[username]["is_logged"] = True
+			
 		client_conn.send(
 			bytes(
-				"""Enter your username and password:"""
+				"""Login Successful!
+					Where you want to see next?
+					Reply with:
+					1: Profile page
+					2: Log out (We will miss you!)
+				"""
 			, 'utf-8')
 		)
-
-		username = client_conn.recv(1024).decode()
-		password = client_conn.recv(1024).decode()
-
-		auth = login_auth(database, username, password)
-		if (auth):
 			
-			database[username]["is_logged"] = True
-			
-			client_conn.send(
-				bytes(
-					"""Login Successful!
-						Where you want to see next?
-						Reply with:
-						1: Profile page
-						2: Your feed
-						3: Your followers
-						4: Your followings
-						5: Your tweets
-						6: Post Tweet
-						7: Search User
-						8: Log out (Please do not click this!)
-					"""
-				, 'utf-8')
-			)
-			
-			response = client_conn.recv(1024).decode()
+		response = client_conn.recv(1024).decode()
 
-			if (response == "1"):
-				user_profile_page(client_conn, database, username)
-			elif (response == "2"):
-				user_feed_page(client_conn, database, username)
-			elif (response == "3"):
-				user_followers_page(client_conn, database, username)
-			elif (response == "4"):
-				user_followings_page(client_conn, database, username)
-			elif (response == "5"):
-				user_tweets_page(client_conn, database, username)
-			elif (response == "6"):
-				post_receive(client_conn, database, username)
-			elif (response == "7"):
-				search_user_page(client_conn, database, username)
-			elif (response == "8"):
-				logout_page(client_conn, database, username)
-		elif (auth == 0):
-			client_conn.send(
-				bytes(
-					"""Login Unsuccessful! Please check your username"""
-				, 'utf-8')
-			)
-		else:
-			client_conn.send(
-				bytes(
-					"""Login Unsuccessful! Please check your password"""
-				, 'utf-8')
-			)
+		if (response == "1"):
+			user_profile_page(client_conn, database, username)
+		elif (response == "2"):
+			logout_page(client_conn, database, username)
+			return
+	elif (auth == 0):
+		client_conn.send(
+			bytes(
+				"""Login Unsuccessful! Please check your username
+				Reply with:
+				1: to create account
+				2: to exit
+				"""
+			, 'utf-8')
+		)
+		response = client_conn.recv(1024).decode()
+		if (response == "1"):
+			create_account_page(client_conn, database)
+		elif (response == "2"):
+			exit_page(client_conn)
+			return
+	else:
+		client_conn.send(
+			bytes(
+				"""Login Unsuccessful! Please check your password
+				Reply with:
+				1: to create account
+				2: to exit
+				"""
+			, 'utf-8')
+		)
+		response = client_conn.recv(1024).decode()
+		if (response == "1"):
+			create_account_page(client_conn, database)
+		elif (response == "2"):
+			exit_page(client_conn)
+			return
 		
 
 def create_account_page(client_conn, database):
@@ -393,7 +458,8 @@ def create_account_page(client_conn, database):
 		username = client_conn.recv(1024).decode()
 		password = client_conn.recv(1024).decode()
 
-		db_addlogin(database, username, password)
+		database = db_addlogin(database, username, password)
+		print(database, "after login")
 
 		client_conn.send(
 			bytes(
@@ -410,8 +476,10 @@ def create_account_page(client_conn, database):
 
 		if (response == "1"):
 			login_page(client_conn, database)
+			return
 		else:
 			exit_page(client_conn)
+			return
 
 
 
@@ -440,8 +508,10 @@ def home_page(client_conn , database):
 
 		if (response == "1"):
 			login_page(client_conn, database)
+			return
 		elif(response == "2"):
 			create_account_page(client_conn, database)
+			return
 		elif (response == "4"):
 			exit_page(client_conn)
 			return
@@ -467,13 +537,13 @@ while True:
 	connection, addr = s.accept()
 
 	# connection.settimeout(10)
-
 	database = db_load("user")
 
 	home_page(connection, database)
 
 	db_save(database, "user")
-
+	print(" database saved")
+	
 	connection.close()
 	print("connection closed", repr(addr))
 
