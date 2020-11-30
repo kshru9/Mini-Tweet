@@ -1,2 +1,4 @@
-Delete tweet function
-When a user follow/unfollow ... should be updated in followed/unfollowed user db as well
+Delete tweet function ->> Done
+When a user follow/unfollow ... should be updated in followed/unfollowed user db as well ->> Done
+In your tweets page, also ask to post the tweet ->> Done
+change buf size from 1KB -> 64KB

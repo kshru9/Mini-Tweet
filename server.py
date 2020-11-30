@@ -7,6 +7,119 @@ from database import *
 from datetime import datetime
 import re
 
+#Searching for particular hashtag
+def search_hashtag(client_conn,database,username):
+	"""A function to send search hashtag page to client"""
+	while True:
+		client_conn.send(
+				bytes(
+					"""Enter hashtag to Search tweets for it""" 
+				, 'utf-8')
+			)
+		hash='#'+client_conn.recv(1024).decode()
+		message='Search results for '+hash+'\n'
+		if hash in database["hashtag_category"].keys():
+			for h in database["hashtag_category"][hash]:
+				message+="By "+h[username]+" :-> "+h['tweet'] + '\t'+h['date']+"  "+h['time']+'\n'
+
+		else:
+			message=hash+" Not Found"
+
+		client_conn.send(
+			bytes(
+				message + 
+				"""Reply with:
+				1: Your profile page
+				2: Search hashtag
+				"""
+				,'utf-8')
+		)
+
+		response = client_conn.recv(1024).decode()
+
+		if (response=="1"):
+			user_profile_page(client_conn, database, username)
+		elif (response=="2"):
+			search_hashtag(client_conn, database, username)
+
+def trending_hashtag(client_conn,database,username):
+	"""A function to send trending hashtag page to client"""
+
+	hashStack=[]
+	curr_hash_count=0
+	top_5=5
+	for hash in database['hashtag_category'].keys():
+		curr_hash_count+=1
+		curr_len=len(hash)
+		if(curr_hash_count <=top_5):
+			j=curr_hash_count
+			while j>0 and curr_len>len(database['hashtag_category'][hashStack[j]]):
+				hashStack[j]=hashStack[j-1]
+				j-=1
+			hashStack[j]=hash
+		else:
+			j=5
+			while j>0 and curr_len>len(database['hashtag_category'][hashStack[j]]):
+				hashStack[j]=hashStack[j-1]
+				j-=1
+			hashStack[j]=hash
+
+	message='\n'
+	for hash in hashStack:
+		for h in database["hashtag_category"][hash]:
+			message+="By "+h[username]+" :-> "+h['tweet'] + '\t'+h['date']+"  "+h['time']+'\n'
+	message+="\n"
+
+	while True:
+		client_conn.send(
+			bytes(
+				"""Top 5 trending hashtags are: """ + "\n" + message +
+				"""Reply with:
+				1: Your profile page
+				"""
+			, 'utf-8')
+		)
+		
+		response = client_conn.recv(64*1024)
+		
+		if (response=="1"):
+			user_profile_page(client_conn, database, username) 
+
+def user_feed_page(client_conn, database, username):
+	"""To display client's tweets and tweets of people client follow (recent 5)"""
+
+	print('feed')
+	Tweets=sorted(database[username]['tweets'],key =lambda i: (i['date'],i['time']),reverse=True)
+	Tweets=Tweets[0:5]
+	followTweets=[]
+	for follow in database[username]['following']:
+		followTweets=sorted(database[follow]['tweets'],key =lambda i: (i['date'],i['time']),reverse=True)
+		Tweets.extend(followTweets[0:5])
+	Tweets=sorted(Tweets,key =lambda i: (i['date'],i['time']))
+	
+	message=''
+	#Send Tweets
+	for tweet in Tweets:
+		message+="By "+username+" :-> "+tweet['tweet'] + '\t'+tweet['date']+"  "+tweet['time']+'\n'
+	#print(message)
+
+
+	while True:
+		client_conn.send(
+			bytes(
+				"""Your Feed is:
+				""" + """\n""" + message +
+				"""Reply with:
+				1: Your profile page
+				"""
+				,'utf-8')
+				)
+		response = client_conn.recv(1024).decode()
+
+		if (response=="1"):
+			user_profile_page(client_conn, database, username)
+	
+
 def post_receive(client_conn,database,username):
 	"""A function to send post tweet page to client"""
 	while True:
@@ -25,12 +138,12 @@ def post_receive(client_conn,database,username):
 	# 	tweet_part=str((client_conn.recv(1024)).decode('utf-8'))
 
 		dt_object=datetime.now()
-		date=dt_object.date
-		time=dt_object.time
+		date=dt_object.strftime("%d/%m/%Y")
+		time=dt_object.strftime("%H:%M:%S")
 
 		hashtags=re.findall(r'#\w+', response) # creates a list of hashtags in the tweet
 		for hash in hashtags:
-			setHash(database,hash,username,response,date,time)
+			database = setHash(database,hash,username,response,date,time)
 		
 		database = setTweet(database,username,response,date,time)
 		client_conn.send(
@@ -114,8 +227,11 @@ def search_user_page(client_conn , database, username):
 	"""A Function to send search user page to client"""
 
 	while True:
+		allusers = db_get_all_users(database)
+		
 		client_conn.send(
 			bytes(
+				allusers + " " + 
 				"""Enter the username you want to search for:"""
 			, 'utf-8')
 		)
@@ -163,9 +279,6 @@ def search_user_page(client_conn , database, username):
 			if (response == "1"):
 				user_profile_page(client_conn, database, username)
 		
-def user_feed_page(client_conn, database, username):
-	pass
-
 def user_follower_detail(client_conn, database, username, parent_user):
 	"""A function to send details of requested follower of client to client"""
 	while True:
@@ -288,28 +401,37 @@ def user_tweets_page(client_conn, database, username):
 				"""Your Tweets are:
 				""" + tweets +
 				""" Enter tweet to delete it
+				""" + 
+				"""or Reply with:
+				1: Post tweet
+				2: Your profile page
 				"""
 			, 'utf-8')
 		)
 
 		response = client_conn.recv(1024).decode()
 
-		temp = db_delete_tweet(database, username, response)
-		if (temp == 0):
-			client_conn.send(bytes("The tweet you entered do not exist. Reply with: 1: try again 2: Your profile page", 'utf-8'))
-			response = client_conn.recv(1024).decode()
-			if (response == "1"):
-				continue
-			else:
-				user_profile_page(client_conn, database, username)
+		if (response=="1"):
+			post_receive(client_conn, database, username)
+		elif (response=="2"):
+			user_profile_page(client_conn, database, username)
 		else:
-			database = temp
-			client_conn.send(bytes("Tweet Deleted. Reply with: 1: Delete another 2: Your profile page", 'utf-8'))
-			response = client_conn.recv(1024).decode()
-			if (response == "1"):
-				continue
+			temp = db_delete_tweet(database, username, response)
+			if (temp == 0):
+				client_conn.send(bytes("The tweet you entered do not exist. Reply with: 1: try again 2: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response == "1"):
+					continue
+				else:
+					user_profile_page(client_conn, database, username)
 			else:
-				user_profile_page(client_conn, database, username)
+				database = temp
+				client_conn.send(bytes("Tweet Deleted. Reply with: 1: Delete another 2: Your profile page", 'utf-8'))
+				response = client_conn.recv(1024).decode()
+				if (response == "1"):
+					continue
+				else:
+					user_profile_page(client_conn, database, username)
 
 def logout_page(client_conn, database, username):
 	"""A function to logout client"""
@@ -317,13 +439,34 @@ def logout_page(client_conn, database, username):
 	# while True:
 	database[username]["is_logged"] = False
 
+	# client_conn.send(
+	# 	bytes(
+	# 		"""You have been successfully logged out!
+	# 			See you soon!
+	# 		"""
+	# 	, 'utf-8')
+	# )
+
 	client_conn.send(
 		bytes(
 			"""You have been successfully logged out!
 				See you soon!
+				Where you want to see next?
+				Reply with:
+				1: Home Page
+				2: Exit Page 
 			"""
 		, 'utf-8')
-	)
+		)
+		
+	response = client_conn.recv(1024).decode()
+
+	if (response == "1"):
+		home_page(client_conn, database)
+		return
+	elif(response == "2"):
+		exit_page(client_conn, database)
+		return
 	return
 
 def exit_page(client_conn):
@@ -357,6 +500,8 @@ def user_profile_page(client_conn, database, username):
 				3: Your tweets
 				4: Post Tweet
 				5: Log out (We will miss you!)
+				6: Search Tweets with hashtag
+				7: Get Trending hashtag
 				"""
 			, 'utf-8')
 		)
@@ -374,6 +519,10 @@ def user_profile_page(client_conn, database, username):
 		elif (response == "5"):
 			logout_page(client_conn, database, username)
 			return
+		elif (response=="6"):
+			search_hashtag(client_conn, database, username)
+		elif(response=="7"):
+			trending_hashtag(client_conn, database, username)
 
 def login_page(client_conn, database):
 	"""A function to send login page to client"""

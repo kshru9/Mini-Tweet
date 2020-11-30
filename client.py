@@ -9,7 +9,7 @@ client_socket.connect((HOST,PORT))
 print("Connected to Server")
 
 while True:
-    conn, addr = client_socket.recvfrom(1024)
+    conn, addr = client_socket.recvfrom(1024*64)
     
     conn = conn.decode('utf-8')
 

@@ -25,6 +25,18 @@ structure of database
 	}
 }
 """
+def db_load(dbfile):
+	File = open("user.pickle", 'rb')
+	db = pickle.load(File)
+	print(db)
+	File.close()
+	return db
+
+def db_save(database, filename):
+	dbfile = open("user.pickle", 'wb')
+	pickle.dump(database, dbfile)
+	dbfile.close()
+	print("saved")
 
 def db_addlogin(database, username, password):
 	database[username] = {
@@ -35,90 +47,109 @@ def db_addlogin(database, username, password):
 		"following": list()
 	}
 	print('Added %s to database' %username)
-	db_save(database, "user")
+	db_save(database, "user.pickle")
 	return database
-	
-
-def db_load(dbfile):
-	File = open("user.pickle", 'rb')
-	db = pickle.load(File)
-	print(db)
-	File.close()
-	return db
-
-
-def db_save(database, filename):
-	dbfile = open("user.pickle", 'wb')
-	pickle.dump(database, dbfile)
-	dbfile.close()
-	print("saved")
 
 def db_get_user_followers(database, username):
+	if (username not in database.keys()):
+		return "USERNAME DONOT EXIST"
 	followers = database[username]["followers"]
 	string = ""
 	for x in followers:
 		string += x
 		string += "\n"
-	db_save(database, "user")
+	db_save(database, "user.pickle")
 	return string
 
 def db_get_user_following(database, username):
+	if (username not in database.keys()):
+		return "USERNAME DONOT EXIST"
 	followings = database[username]["following"]
 	string = ""
 	for x in followings:
 		string += x
 		string += "\n"
-	db_save(database, "user")
+	db_save(database, "user.pickle")
 	return string
 
 def db_get_user_tweets(database, username):
+	if (username not in database.keys()):
+		return "USERNAME DONOT EXIST"
 	tweets = database[username]["tweets"]
 	string = ""
 	for x in tweets:
 		string += x["tweet"]
 		string += "\n"
-	db_save(database, "user")
+	db_save(database, "user.pickle")
+	return string
+
+def db_get_all_users(database):
+	"""returns string of all users registered on mini tweet"""
+	users = list(database.keys())
+	string = ""
+	for x in users:
+		string += x
+		string += "\n"
+	db_save(database, "user.pickle")
 	return string
 
 def db_get_user(database, username):
+	"""returns 1 if username exist in db"""
 	users = list(database.keys())
 	if (username in users):
-		db_save(database, "user")
+		db_save(database, "user.pickle")
 		return 1
-	db_save(database, "user")
+	db_save(database, "user.pickle")
 	return 0
 
 def db_follow_user(database, username, parent_user):
 	if (username in database[parent_user]["followers"]):
 		return 0
-	database[parent_user]["followers"].append(username)
+	database[parent_user]["following"].append(username)
+	database[username]["followers"].append(parent_user)
 	return database
 
 def db_unfollow_user(database, username, parent_user):
 	if (username not in database[parent_user]["followers"]):
 		return 0
-	database[parent_user]["followers"].remove(username)
+	database[parent_user]["following"].remove(username)
+	database[username]["followers"].remove(parent_user)
 	return database
 
 def db_delete_tweet(database, username, tweet):
-	if (tweet not in database[username]["tweets"]):
-		return 0
-	database[username]["tweets"].append(tweet)
-	return database
+	alltweets = database[username]["tweets"]
+	count = 0
+	for x in alltweets:
+		if (tweet == x["tweet"]):
+			del database[username]["tweets"][count]
+			print(database)
+			return database
+		count+=1
+	return 0
 
 def setHash(database,hashtag,username,tweet,date,time):
-	if hashtag in database['hashtag_category'].keys() :
-		pass
-	else:
-		database['hashtag_category'][hashtag]=[]
+	try:
+		if hashtag in database['hashtag_category'].keys():
+			pass
+		else:
+			database['hashtag_category'][hashtag] = list()
+	except KeyError:
+		database["hashtag_category"] = dict()
+	
 	details={
 		'username':username,
 		'tweet':tweet,
 		'date':date,
 		'time':time,
 	}
-	database['hashtag_category'][hashtag].append(details)
+	try:
+		database['hashtag_category'][hashtag].append(details)
+	except KeyError:
+		database['hashtag_category'][hashtag] = list()
+		database['hashtag_category'][hashtag].append(details)
+	
 	db_save(database, "user")
+	return database
 
 def setTweet(database,username,tweet,date,time):
 	details={
