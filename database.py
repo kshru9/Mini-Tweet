@@ -173,5 +173,3 @@ def setTweet(database,username,tweet,date,time, retweet):
 	database[username]['tweets'].append(details)
 	db_save(database, "user")
 	return database
-
-def db_addRetweet(database, username, parent_user, tweet, date, time):
