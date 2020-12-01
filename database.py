@@ -1,4 +1,5 @@
 import pickle
+import os
 """
 structure of database
 {
@@ -28,6 +29,10 @@ structure of database
 }
 """
 def db_load(dbfile):
+	if (not os.path.isfile("user.pickle")):
+		File = open("user.pickle", "wb")
+		pickle.dump(dict(), File)
+		File.close()
 	File = open("user.pickle", 'rb')
 	db = pickle.load(File)
 	print(db)
