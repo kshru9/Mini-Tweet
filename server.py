@@ -285,11 +285,11 @@ def retweet(client_conn, database, username, parent_user, tweet):
 		date=dt_object.strftime("%d/%m/%Y")
 		time=dt_object.strftime("%H:%M:%S")
 
-		hashtags=re.findall(r'#\w+', response) # creates a list of hashtags in the tweet
+		hashtags=re.findall(r'#\w+', tweet) # creates a list of hashtags in the tweet
 		for hash in hashtags:
-			database = setHash(database,hash,username,response,date,time, parent_user)
+			database = setHash(database,hash,username,tweet,date,time, parent_user)
 
-		database = setTweet(database,username,response,date,time, parent_user)
+		database = setTweet(database,username,tweet,date,time, parent_user)
 
 		client_conn.send(
 			bytes(
@@ -321,7 +321,7 @@ def search_user_tweets(client_conn, database, username, parent_user):
 			, 'utf-8')
 		)
 
-		retweet = client_conn.recv(1024).decode()
+		Retweet = client_conn.recv(1024).decode()
 
 		if (retweet=="1"):
 			user_profile_page(client_conn, database, parent_user)

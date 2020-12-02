@@ -22,5 +22,4 @@ def encrypt(text,s):
         # Encrypt lowercase characters 
         else: 
             result += chr((ord(char) + s - 97) % 26 + 97) 
-    print(result)
     return result

@@ -103,6 +103,7 @@ def db_get_all_users(database):
 def db_get_user(database, username):
 	"""returns 1 if username exist in db"""
 	users = list(database.keys())
+	users.remove('hashtag_category')
 	if (username in users):
 		db_save(database, "user.pickle")
 		return 1
@@ -136,6 +137,7 @@ def db_delete_tweet(database, username, tweet):
 
 def db_get_online_users(database):
 	allusers = database.keys()
+	allusers.remove('hashtag_category')
 	string = ""
 	for x in allusers:
 		if (database[x]["is_logged"] == True):

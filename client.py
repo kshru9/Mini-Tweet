@@ -25,7 +25,6 @@ while True:
         client_socket.send(username)
         client_socket.send(bytes(password, 'utf-8'))
     else:
-        print('else')
         print(conn)
 
         response = bytes(str(input()), 'utf-8')
