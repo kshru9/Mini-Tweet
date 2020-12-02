@@ -336,7 +336,7 @@ def search_user_page(client_conn , database, username):
 		
 		client_conn.send(
 			bytes(
-				allusers + " " + 
+				allusers + "\n" + 
 				"""Enter the username you want to search for:"""
 			, 'utf-8')
 		)
