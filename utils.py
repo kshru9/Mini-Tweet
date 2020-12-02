@@ -1,9 +1,6 @@
 def login_auth(database, username, password):
     print(list(database.keys()), "list")
     if (username in list(database.keys())):
-        # #password = encrypt(password, 26 - 4)
-        # print("password")
-        # print(password)
         if (database[username]["password"] == password):
             return 1
         else:
