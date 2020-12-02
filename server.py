@@ -326,7 +326,7 @@ def search_user_tweets(client_conn, database, username, parent_user):
 		if (retweet=="1"):
 			user_profile_page(client_conn, database, parent_user)
 		else:
-			retweet(client_conn, database, username, parent_user, retweet)
+			retweet(client_conn, database, username, parent_user, Retweet)
 
 def search_user_page(client_conn , database, username):
 	"""A Function to send search user page to client"""
