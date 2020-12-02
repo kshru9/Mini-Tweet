@@ -16,11 +16,14 @@ def search_hashtag(client_conn,database,username):
 					"""Enter hashtag to Search tweets for it""" 
 				, 'utf-8')
 			)
-		hash='#'+client_conn.recv(1024).decode()
+		
+		hash=client_conn.recv(1024).decode().replace('#','')
+		print(hash)
+		hash='#'+hash
 		message='Search results for '+hash+'\n'
 		if hash in database["hashtag_category"].keys():
 			for h in database["hashtag_category"][hash]:
-				message+="By "+h[username]+" :-> "+h['tweet'] + '\t'+h['date']+"  "+h['time']+'\n'
+				message+="By "+h['username']+" :-> "+h['tweet'] + '\t'+h['date']+"  "+h['time']+'\n'
 
 		else:
 			message=hash+" Not Found"
@@ -44,7 +47,6 @@ def search_hashtag(client_conn,database,username):
 
 def trending_hashtag(client_conn,database,username):
 	"""A function to send trending hashtag page to client"""
-
 	hashStack=[]
 	curr_hash_count=0
 	top_5=5
@@ -52,10 +54,12 @@ def trending_hashtag(client_conn,database,username):
 		curr_hash_count+=1
 		curr_len=len(hash)
 		if(curr_hash_count <=top_5):
-			j=curr_hash_count
+			j=curr_hash_count-1
+			hashStack.append(hash)
 			while j>0 and curr_len>len(database['hashtag_category'][hashStack[j]]):
 				hashStack[j]=hashStack[j-1]
 				j-=1
+				print(j)
 			hashStack[j]=hash
 		else:
 			j=5
@@ -67,7 +71,7 @@ def trending_hashtag(client_conn,database,username):
 	message='\n'
 	for hash in hashStack:
 		for h in database["hashtag_category"][hash]:
-			message+="By "+h[username]+" :-> "+h['tweet'] + '\t'+h['date']+"  "+h['time']+'\n'
+			message+="By "+h['username']+" :-> "+h['tweet'] + '\t'+h['date']+"  "+h['time']+'\n'
 	message+="\n"
 
 	while True:
@@ -358,7 +362,7 @@ def search_user_page(client_conn , database, username):
 			if (response == "1"):
 				search_user_profile(client_conn, database, search_user, username)
 			elif (response == "2"):
-				search_user_tweets(client_conn, database, search_user)
+				search_user_tweets(client_conn, database, search_user,username)
 			elif (response == "3"):
 				user_followers_page(client_conn, database, search_user)
 			elif (response == "4"):
@@ -428,10 +432,10 @@ def user_following_detail(client_conn, database, username, parent_user):
 		client_conn.send(
 			bytes(
 				"Profile page of " + username + 
-				"""Followers: """ + followers +
-				"""Followings:""" + followings +
-				"""Tweets:""" + tweets + 
-				"""Reply with:
+				"""\nFollowers: """ + followers +
+				"""\nFollowings:""" + followings +
+				"""\nTweets:""" + tweets + 
+				"""\nReply with:
 				1: Unfollow
 				2: Your profile page
 				"""
@@ -566,7 +570,7 @@ def logout_page(client_conn, database, username):
 		home_page(client_conn, database)
 		return
 	elif(response == "2"):
-		exit_page(client_conn, database)
+		exit_page(client_conn)
 		return
 	return
 
@@ -591,11 +595,11 @@ def user_profile_page(client_conn, database, username):
 		client_conn.send(
 			bytes(
 				"""Your Profile details:
-					Username: 
+					\nUsername: 
 				""" + username +
-				"""Followers: """ + followers +
-				"""Followings:""" + followings +
-				"""Reply with:
+				"""\nFollowers: """ + followers +
+				"""\nFollowings:""" + followings +
+				"""\nReply with:
 				1: Search User
 				2: Your feed
 				3: Your tweets
@@ -639,7 +643,7 @@ def login_page(client_conn, database):
 	password = client_conn.recv(1024).decode()
 
 	auth = login_auth(database, username, password)
-	if (auth):
+	if (auth==1):
 			
 		database[username]["is_logged"] = True
 			

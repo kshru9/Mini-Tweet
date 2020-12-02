@@ -1,6 +1,7 @@
 import time
 import socket
 from utils import *
+from getpass import getpass
 
 HOST = "localhost"
 PORT = 12345
@@ -20,7 +21,7 @@ while True:
     elif(conn == "Enter your username and password:"):
         print(conn)
         username = bytes(str(input()), 'utf-8')
-        password = encrypt(str(input()), 4)
+        password = encrypt(getpass(), 4)
         client_socket.send(username)
         client_socket.send(bytes(password, 'utf-8'))
     else:
