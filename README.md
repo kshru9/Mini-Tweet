@@ -38,4 +38,4 @@ Design and implement a Minie-Tweet tool using any of the networking paradigms th
 - Run `python server.py` in one terminal first
 - Run `python client.py` in other terminals
 
-_[YouTube Video](#https://youtu.be/8q_hZBp9SEI)_
+_YouTube Video_: https://youtu.be/8q_hZBp9SEI
